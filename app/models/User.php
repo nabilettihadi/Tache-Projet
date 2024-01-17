@@ -1,80 +1,85 @@
-<?php
-class User
-{
-    private $db;
-    public function __construct()
+ <?php
+    class User extends Db
     {
-        $this->db = new Database;
-    }
-    public function findUserbyEmail($email)
-    {
-        $this->db->query('SELECT * FROM users WHERE user_email=:email');
-        $this->db->bind(':email', $email);
-        $row = $this->db->single();
-        if ($this->db->rowCount() > 0) {
-            return true;
-        } else {
-            return false;
+        private $firstName;
+        private $lastName;
+        private $email;
+        private $password;
+    
+        // getters
+        public function getfirstName()
+        {
+            return $this->firstName;
         }
-    }
-    public function register($data)
-    {
-        $this->db->query('INSERT INTO users(user_fullname,user_email,user_pass) VALUES(:name , :email , :pass)');
-        $this->db->bind(':name', $data['name']);
-        $this->db->bind(':email', $data['email']);
-        $this->db->bind(':pass', $data['pass']);
-        if ($this->db->execute()) {
-            return true;
-        } else {
-            return false;
+        public function getlasttName()
+        {
+            return $this->lastName;
         }
-    }
-    public function login($data)
-    {
-        $this->db->query('SELECT * FROM users WHERE user_email = :email ');
-        $this->db->bind(':email', $data['email']);
+        public function getemail()
+        {
+            return $this->email;
+        }
+        public function getpassword()
+        {
+            return $this->password;
+        }
+        // setters
+        public function setfirstName($firstName)
+        {
+            $this->firstName=$firstName;
+        }
+        public function setlastName($lastName)
+        {
+            $this->lastName = $lastName;
+        }
+        public function setemail($email)
+        {
+             $this->email=$email;
+        }
+        public function setpassword($password)
+        {
+             $this->password=$password;
+        }
+        //registeration function
+        public function Signup()
+        {
+            try {
+                $stmt = $this->connect()->prepare("INSERT INTO user (firstname,lastname,email,password) values(:firstname,:lastname,:email,:password)");
+                $stmt->bindParam("firstname", $this->getfirstName());
+                $stmt->bindParam("lastname", $this->getlasttName());
+                $stmt->bindParam("email", $this->getemail());
+                $stmt->bindParam("password", $this->getpassword());
+                return  $stmt->execute();
+             
+            } catch (PDOException $e) {
+                return $e->getMessage();
+            }
+        }
+        public function validateUser()
+        {
+            try {
+                $email= $this->getemail();
+                $stmt = $this->connect()->prepare("SELECT email FROM `user` WHERE email =:email");
+                $stmt->bindParam(":email",$email);
+                $stmt->execute();
+                if ($stmt->fetch()) {
+                    return true;
+                } else {
+                    return false;
+                }
+            } catch (PDOException $e) {
+                return $e->getMessage();
+            }
+        }
+        public function logIn()
+        {
+            try {
+                $stmt = $this->connect()->prepare("SELECT * from user where email=:email");
+                $stmt->execute(['email' => $this->getemail()]);
+                return $stmt->fetch();
+            } catch (PDOException $e) {
+                return $e->getMessage();
+            }
+        }
 
-        $row = $this->db->single();
-        $hashedpass = $row['user_pass'];
-        if (password_verify($data['pass'], $hashedpass)) {
-            return $row;
-        } else {
-            echo false;
-        }
     }
-    public function search($title)
-    {
-        $this->db->query('SELECT * FROM tasks WHERE task_name = :title OR task_name LIKE :title');
-        $this->db->bind(':title', $title);
-        $row = $this->db->single();
-        return $row;
-    }
-    public function totalpro($userid)
-    {
-        $this->db->query('SELECT COUNT(*) FROM projects WHERE project_owner = :owner ');
-        $this->db->bind(':owner', $userid);
-        $row = $this->db->single();
-        return $row;
-    }
-    public function totaltasks($userid)
-    {
-        $this->db->query('SELECT COUNT(*) FROM tasks WHERE user = :owner ');
-        $this->db->bind(':owner', $userid);
-        $row = $this->db->single();
-        return $row;
-    }
-    public function total_act_tasks($userid)
-    {
-        $this->db->query('SELECT COUNT(*) FROM tasks WHERE user = :owner AND task_status <> "Done" ');
-        $this->db->bind(':owner', $userid);
-        $row = $this->db->single();
-        return $row;
-    }
-    public function total_done_task($userid)
-    {
-        $this->db->query('SELECT COUNT(*) FROM tasks WHERE user = :owner AND task_status = "Done" ');
-        $this->db->bind(':owner', $userid);
-        $row = $this->db->single();
-        return $row;
-    }
-}

@@ -1,55 +1,128 @@
 <?php
-class Project
+
+class Project extends Db
 {
-    private $db;
-    public function __construct()
+    private $id;
+    private $Name;
+    private $startDate;
+    private $endDate;
+
+    public function getid()
     {
-        $this->db = new Database;
+        return $this->id;
+    }
+    public function getName()
+    {
+        return $this->Name;
+    }
+    public function getstartDate()
+    {
+        return $this->startDate;
+    }
+    public function getendDate()
+    {
+        return $this->endDate;
+    }
+    // setters
+    public function setid($id)
+    {
+        $this->id = $id;
+    }
+    public function setName($Name)
+    {
+        $this->Name = $Name;
+    }
+    public function setstartDate($startDate)
+    {
+        $this->startDate = $startDate;
+    }
+    public function setendDate($endDate)
+    {
+        $this->endDate = $endDate;
     }
 
-    public function addpro($data)
-    {
-        $this->db->query('INSERT INTO projects(project_name,project_desc,project_deadline,project_owner) VALUES(:name,:pro_desc ,:deadline,:owner)');
 
-        $this->db->bind(':name', $data['name']);
-        $this->db->bind(':pro_desc', $data['desc']);
-        $this->db->bind(':deadline', $data['dead']);
-        $this->db->bind(':owner', $data['userid']);
-        $this->db->execute();
-    }
-    public function display($ownerid)
+    public function addproject($user_id)
     {
-        $data['owner'] = $ownerid;
-        $this->db->query('SELECT * FROM projects WHERE project_owner = :owner');
-        $this->db->bind(':owner', $data['owner']);
-        $row = $this->db->resultSet();
-        return $row;
-    }
-    public function displaypro($data)
-    {
-        $this->db->query('SELECT * FROM projects WHERE project_owner = :owner');
-        $this->db->bind(':owner', $data['userid']);
-        $row = $this->db->resultSet();
-        return $row;
-    }
-    public function delete($proid)
-    {
+        $Name = $this->getName();
+        $startDate = $this->getstartDate();
+        $endDate = $this->getendDate();
+        $user_id = $_SESSION["user-id"];
 
-        $this->db->query('DELETE FROM projects WHERE project_id = :id');
-        $this->db->bind(':id', $proid);
-        $this->db->execute();
-    }
-    public function update($data)
-    {
+        $stmt = $this->connect()->prepare("INSERT INTO project (name, start_date, end_date, user_id) VALUES (:name, :start_date, :end_date, :user_id)");
+        $stmt->bindParam(":name", $Name);
+        $stmt->bindParam(":start_date", $startDate);
+        $stmt->bindParam(":end_date", $endDate);
+        $stmt->bindParam(":user_id", $user_id);
 
-        $this->db->query('UPDATE projects 
-        SET project_name = :name, project_desc = :desc, project_deadline = :dead 
-        WHERE project_id = :id;
-        ');
-        $this->db->bind(':name', $data['name']);
-        $this->db->bind(':desc', $data['description']);
-        $this->db->bind(':dead', $data['deadline']);
-        $this->db->bind(':id', $data['proid']);
-        $this->db->execute();
+        if ($stmt->execute()) {
+            return true;
+        } else {
+
+            return false;
+        }
+    }
+    // getprojects:
+    public function getprojects($user_id)
+    {
+        try {
+            $user_id = $_SESSION["user-id"];
+            $stmt = $this->connect()->prepare("SELECT * FROM project where user_id=:user_id");
+            $stmt->bindParam(":user_id",$user_id);
+            $stmt->execute();
+            $data = $stmt->fetchAll();
+            if (count($data) > 0) {
+                return $data;
+            }
+        } catch (PDOException $e) {
+            return $e->getMessage();
+        }
+    }
+    public function getprojectRow($id)
+    {
+        $id = $this->getid();
+        try {
+            $stmt = $this->connect()->prepare("SELECT * FROM project WHERE idproject =$id");
+            if ($stmt->execute()) {
+                return $stmt->fetch();
+            }
+        } catch (PDOException $e) {
+            return $e->getMessage();
+        }
+    }
+    public function updateproject()
+    {
+        $id = $this->getid();
+        $Name = $this->getName();
+        $startDate = $this->getstartDate();
+        $endDate = $this->getendDate();
+        $user_id = $_SESSION["user-id"];
+        try {
+            $stmt = $this->connect()->prepare("UPDATE project SET idproject =:id,name = :name, start_date = :start_date, end_date = :end_date,user_id=:user_id WHERE idproject =:id");
+            $stmt->bindParam(":name", $Name);
+            $stmt->bindParam(":start_date", $startDate);
+            $stmt->bindParam(":end_date", $endDate);
+            $stmt->bindParam(":user_id", $user_id);
+            $stmt->bindParam("id", $id);
+            if ($stmt->execute()) {
+                return true;
+            } else {
+                return false;
+            }
+        } catch (PDOException $e) {
+            return $e->getMessage();
+        }
+    }
+    // delete project:
+    public function deleteproject()
+    {
+        $id = $this->getid();
+        try {
+            $stmt = $this->connect()->prepare("DELETE FROM project WHERE idproject =:id");
+            $stmt->bindParam(":id", $id);
+            $stmt->execute();
+        } catch (PDOException $e) {
+            return $e->getMessage();
+        }
     }
 }

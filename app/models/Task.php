@@ -1,43 +1,225 @@
 <?php
 class Task
 {
-    private $db;
-    public function __construct()
+    private $idTask;
+    private $titleTask;
+    private $descTask;
+    private $deadline;
+    private $status;
+    public $conn;
+
+    function __construct()
     {
-        $this->db = new Database;
+        $Dbinstance = new Db();
+        $this->conn = $Dbinstance->connect();
     }
-    public function display($proid)
+    public function getIdta()
     {
-        $data['proid'] = $proid;
-        $this->db->query('SELECT * FROM tasks WHERE pro_id = :proid ORDER BY task_deadline ASC;');
-        $this->db->bind(':proid', $data['proid']);
-        $row = $this->db->resultSet();
-        return $row;
+        return $this->idTask;
     }
-    public function addtask($data)
+
+    public function setIdta($idTask)
     {
-        $this->db->query('INSERT INTO tasks(task_name,task_desc,task_deadline,pro_id,user) VALUES(:name,:desc ,:deadline,:pro, :user)');
-        $this->db->bind(':name', $data['name']);
-        $this->db->bind(':desc', $data['desc']);
-        $this->db->bind(':deadline', $data['dead']);
-        $this->db->bind(':pro', $data['proid']);
-        $this->db->bind(':user', $data['userid']);
-        $this->db->execute();
+        $this->idTask = $idTask;
     }
-    public function deletetask($id)
+    public function getTitle()
     {
-        $this->db->query('DELETE FROM tasks WHERE task_id = :id');
-        $this->db->bind(':id', $id);
-        $this->db->execute();
+        return $this->titleTask;
     }
-    public function updatetask($data)
+
+    public function setTitle($titleTask)
     {
-        $this->db->query('UPDATE tasks SET task_name=:name , task_status =:status , task_desc=:desc , task_deadline = :deadline  WHERE task_id = :id');
-        $this->db->bind(':name', $data['name']);
-        $this->db->bind(':status', $data['status']);
-        $this->db->bind(':desc', $data['desc']);
-        $this->db->bind(':deadline', $data['dead']);
-        $this->db->bind(':id', $data['taskid']);
-        $this->db->execute();
+        $this->titleTask = $titleTask;
+    }
+
+    public function getDescta()
+    {
+        return $this->descTask;
+    }
+
+    public function setDescta($descTask)
+    {
+        $this->descTask = $descTask;
+    }
+    public function getDeadline()
+    {
+        return $this->deadline;
+    }
+
+    public function setdeadline($deadline)
+    {
+        $this->deadline = $deadline;
+    }
+    public function getStatut()
+    {
+        return $this->status;
+    }
+
+    public function setStatus($status)
+    {
+        $this->status = $status;
+    }
+
+
+    public function addTask($user_id, $project_id)
+    {
+        // $user_id = $_SESSION["user-id"];
+        $stmt = $this->conn->prepare("INSERT INTO task (title,description,status,deadline,user_id,id_project) values(:title,:description,:status,:deadline,:user_id,:id_project)");
+        $stmt->bindParam(':title', $this->titleTask);
+        $stmt->bindParam(':description', $this->descTask);
+        $stmt->bindParam(':status', $this->status);
+        $stmt->bindParam(':deadline', $this->deadline);
+        $stmt->bindParam(':user_id', $user_id);
+        $stmt->bindParam(':id_project', $project_id);
+        if ($stmt->execute()) {
+            return true;
+        }
+    }
+    public function getTasks($user_id, $project_id)
+    {
+        try {
+            // $user_id = $_SESSION["user-id"];
+            // $project_id = $_SESSION["idproject"];
+            $stmt = $this->conn->prepare("SELECT * FROM task where user_id=:user_id and id_project=:id_project and archive is null ORDER BY deadline DESC");
+            $stmt->bindParam(":user_id", $user_id);
+            $stmt->bindParam(":id_project", $project_id);
+            $stmt->execute();
+            $data = $stmt->fetchAll();
+            if (count($data) > 0) {
+                return $data;
+            }
+        } catch (PDOException $e) {
+            return $e->getMessage();
+        }
+    }
+    public function Archive($idTask)
+    {
+        try {
+            $stmt = $this->conn->prepare("UPDATE task set archive=1 where id_task=:id_task");
+            $stmt->bindParam(":id_task", $idTask);
+            if ($stmt->execute()) {
+                return
+                    $stmt->execute();
+            }
+        } catch (PDOException $e) {
+            return $e->getMessage();
+        }
+    }
+    public function gettaskRow($id)
+    {
+        try {
+            $id = $this->getIdta();
+            $stmt = $this->conn->prepare("SELECT * FROM task WHERE id_task =$id");
+            if ($stmt->execute()) {
+                return $stmt->fetch();
+            }
+        } catch (PDOException $e) {
+            return $e->getMessage();
+        }
+    }
+    public function updateTask($id)
+    {
+        try {
+            $id = $this->getIdta();
+            $user_id = $_SESSION["user-id"];
+            $project_id = $_SESSION["idproject"];
+            $stmt = $this->conn->prepare("UPDATE task SET title=:title, description=:desc, status=:status, deadline=:deadline, user_id=:user_id, id_project=:id_project WHERE id_task=:id");
+            $stmt->bindParam(":id", $id);
+            $stmt->bindParam(':title', $this->titleTask);
+            $stmt->bindParam(':desc', $this->descTask);
+            $stmt->bindParam(':status', $this->status);
+            $stmt->bindParam(':deadline', $this->deadline);
+            $stmt->bindParam(':user_id', $user_id);
+            $stmt->bindParam(':id_project', $project_id);
+            if ($stmt->execute()) {
+                return true;
+            } else {
+                return false;
+            }
+        } catch (PDOException $e) {
+            return $e->getMessage();
+        }
+    }
+    public function statistictask($status)
+    {
+        try {
+            $stmt = $this->conn->prepare("SELECT count(id_task) from task where status=:status");
+            $stmt->bindParam("status", $status);
+            if ($stmt->execute()) {
+                return $stmt->fetchColumn();
+            }
+        } catch (PDOException $e) {
+            return $e->getMessage();
+        }
+    }
+    public function searchTask()
+    {
+        try {
+            $this->titleTask = "%{$this->titleTask}%";
+            $this->descTask = "%{$this->descTask}%";
+
+            $stmt = $this->conn->prepare("SELECT * FROM task WHERE title LIKE :title OR description LIKE :desc AND archive is null");
+            $stmt->bindParam(':title', $this->titleTask);
+            $stmt->bindParam(':desc', $this->descTask);
+            $stmt->execute();
+
+            if ($stmt->rowCount() > 0) {
+                $result = $stmt->fetchAll();
+                return $result;
+            }
+        } catch (PDOException $e) {
+            return $e->getMessage();
+        }
+    }
+    public function taskProject()
+    {
+        try {
+            $stmt = $this->conn->prepare("SELECT project.name, COUNT(id_task) AS numberoftask FROM task JOIN project ON task.id_project = project.idproject GROUP BY id_project ORDER BY numberoftask DESC LIMIT 1;");
+            if ($stmt->execute()) {
+                return $stmt->fetch();
+            }
+        } catch (PDOException $e) {
+            return $e->getMessage();
+        }
+    }
+    public function taskDone()
+    {
+        try {
+            $stmt = $this->conn->prepare("SELECT project.name, COUNT(id_task) AS numberoftaskdone FROM task JOIN project ON task.id_project = project.idproject where status='done' GROUP BY id_project ORDER BY numberoftaskdone DESC LIMIT 1");
+            if ($stmt->execute()) {
+                return $stmt->fetch();
+            }
+        } catch (PDOException $e) {
+            return $e->getMessage();
+        }
+    }
+    public function taskProjectth()
+    {
+        try {
+            $stmt = $this->conn->prepare("SELECT project.name, COUNT(id_task) AS numberoftaskdone FROM task JOIN project ON task.id_project = project.idproject where status='done' GROUP BY id_project ORDER BY numberoftaskdone ASC LIMIT 1");
+            if ($stmt->execute()) {
+                return $stmt->fetch();
+            }
+        } catch (PDOException $e) {
+            return $e->getMessage();
+        }
+    }
+    public function task()
+    {
+        try {
+            $stmt = $this->conn->prepare("SELECT project.name, COUNT(id_task) AS numberoftaskdone
+            FROM task
+            JOIN project ON task.id_project = project.idproject
+            WHERE status IN ('to do', 'in progress')
+            GROUP BY id_project
+            ORDER BY numberoftaskdone DESC
+            LIMIT 1;
+            ");
+            if ($stmt->execute()) {
+                return $stmt->fetch();
+            }
+        } catch (PDOException $e) {
+            return $e->getMessage();
+        }
     }
 }
